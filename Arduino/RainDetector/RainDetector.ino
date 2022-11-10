@@ -1,6 +1,6 @@
 // Declare I/O pins
 int Sensor = A0;
-int motor = 3;
+int motor = 6;
 
 // Declare global variables
 int bg;
@@ -12,7 +12,7 @@ void setup() {
   pinMode(motor, OUTPUT);
   pinMode(Sensor, INPUT);
   bg = calibrate(Sensor);
-  //digitalWrite(motor, LOW);
+  digitalWrite(motor, LOW);
 }
 
 void loop() {
@@ -52,17 +52,24 @@ int calibrate(int pin) {
 void open(int pin) {
   // Starts the opening cycle
   Serial.println(">> Opening ...");
+  delay(10);
 
   // Work in progress
   // For now this function only turns on a LED connected to motor port
-  for(int i = 0; i < 256; i++) { analogWrite(pin, i); delay(2); }
+  //for(int i = 0; i < 256; i++) { analogWrite(pin, i); delay(2); }
+  digitalWrite(pin, HIGH);
+  delay(10);
 }
 
 void close(int pin) {
   // Starts the closing cycle
   Serial.println(">> Closing ...");
-
+  delay(10);
+  
   // Work in progress
   // For now this function only turns off a LED connected to the motor port
-  for(int i = 255; i > 0; i--) { analogWrite(pin, i); delay(2); }
+  //for(int i = 255; i > 0; i--) { analogWrite(pin, i); delay(2); }
+  digitalWrite(pin, LOW);
+  delay(10);
+
 }
