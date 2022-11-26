@@ -1,5 +1,5 @@
 #include "DHT.h"
- 
+
 #define DHTPIN A2 // pino que estamos conectado
 #define DHTTYPE DHT11 // DHT 11
 
