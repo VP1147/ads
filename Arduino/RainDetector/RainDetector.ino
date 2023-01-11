@@ -24,6 +24,9 @@
 // FALSE - Ignore DHT sensor
 #define DHTISUP true 
 
+// Debug variables (development)
+#define NONSTOP false           // Motor Always on
+
 // Defining I/O pins
 int Sensor = A0;
 int nmotor = 5;
@@ -59,46 +62,43 @@ void setup() {
 }
 
 void loop() {
-  int Read = abs(analogRead(Sensor));
-  humid = dht.readHumidity();
-  temp = dht.readTemperature();
-  delay(30);
-  Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
-  Serial.print("MTR: "); Serial.print(meter); Serial.print("\t\t");
-  Serial.print("CLSD: "); Serial.print(IsClosed); Serial.print("\t\t");
+  if(NONSTOP == true) { digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH); }
+  else {
+    int Read = abs(analogRead(Sensor));
+    humid = dht.readHumidity();
+    temp = dht.readTemperature();
+    delay(30);
+    Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
+    Serial.print("MTR: "); Serial.print(meter); Serial.print("\t\t");
+    Serial.print("CLSD: "); Serial.print(IsClosed); Serial.print("\t\t");
 
-  if(DHTISUP == true) {
-    // Reading temperature and humidity from DHT sensor
-    if(! isnan(humid) && ! isnan(temp)){
-      Serial.print("TEMP: "); Serial.print(temp); Serial.print(" C\t\t");
-      Serial.print("HUMID: "); Serial.print(humid); Serial.print(" %\t\t");   
-    } /*
-    unsigned long currentMillis = millis();
-    if(currentMillis - previousMillis >= interval) {
-      previousMillis = currentMillis;
-      humid = dht.readHumidity();
-      temp = dht.readTemperature();
-    }*/
+    if(DHTISUP == true) {
+      // Reading temperature and humidity from DHT sensor
+      if(! isnan(humid) && ! isnan(temp)){
+        Serial.print("TEMP: "); Serial.print(temp); Serial.print(" C\t\t");
+        Serial.print("HUMID: "); Serial.print(humid); Serial.print(" %\t\t");   
+      }
+    }
+    Serial.print("\n");
+
+    // Check if diference between readings exceeds 15pwm
+    // on the 20ms interval. Also if the meter value doesnt
+    // exceed the wall limiter.
+    if((abs(analogRead(Sensor)-Read) > 15) && meter < 600) {
+      meter += 25;
+    }
+    // Starts opening cycle if meter value reaches 150
+    if(meter > 0) { 
+      if(meter > 150 && IsClosed == true) { open(); IsClosed = false; }
+      // If open, subtracts from meter value until it reaches zero
+      meter-- ;
+    }
+    // if meter value reaches zero, starts closing cycle
+    if(meter == 0 && IsClosed == false) { close(); IsClosed = true; }
+
+
+    counter++ ;
   }
-  Serial.print("\n");
-
-  // Check if diference between readings exceeds 15pwm
-  // on the 20ms interval. Also if the meter value doesnt
-  // exceed the wall limiter.
-  if((abs(analogRead(Sensor)-Read) > 15) && meter < 600) {
-    meter += 25;
-  }
-  // Starts opening cycle if meter value reaches 150
-  if(meter > 0) { 
-    if(meter > 150 && IsClosed == true) { open(); IsClosed = false; }
-    // If open, subtracts from meter value until it reaches zero
-    meter-- ;
-  }
-  // if meter value reaches zero, starts closing cycle
-  if(meter == 0 && IsClosed == false) { close(); IsClosed = true; }
-
-
-  counter++ ;
 }
 
 void open() {
@@ -134,3 +134,4 @@ void close() {
   // Send HH to Relay - motor poweroff
   digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
 }
+
