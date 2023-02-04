@@ -20,12 +20,11 @@
 #define DHTPIN A2
 #define DHTTYPE DHT11
 
-// TRUE - Use DHT sensor (experimental)
-// FALSE - Ignore DHT sensor
-#define DHTISUP true 
 
-// Debug variables (development)
-#define NONSTOP false           // Motor Always on
+// Enviromment variables
+#define DHTISUP         false             // Read from DHT temperature-humidity sensor
+#define NONSTOP         false             // Motor Always on (only for debug-adjustemment)
+#define SERIALRETURN    false             // Send variable data to serial (debug-adjustemment)
 
 // Defining I/O pins
 int Sensor = A0;
@@ -40,17 +39,18 @@ bool IsClosed = true; // Cycle starts closed
 int counter = 0;
 int humid;
 int temp;
+String input;
 
 // Calling DHT function w/ defined parameters
 DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
-  // Begin Serial output
+  // Serial -> Input/Output  
   Serial.begin(9600);
 
-  // Begin DHT  
-  dht.begin();
-
+  if(DHTISUP == true) {
+    dht.begin();  
+  }
   // Setting motor pins
   pinMode(pmotor, OUTPUT); pinMode(nmotor, OUTPUT);
 
@@ -68,12 +68,16 @@ void loop() {
     humid = dht.readHumidity();
     temp = dht.readTemperature();
     delay(30);
-    Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
-    Serial.print("MTR: "); Serial.print(meter); Serial.print("\t\t");
-    Serial.print("CLSD: "); Serial.print(IsClosed); Serial.print("\t\t");
+    if(SERIALRETURN == true) {
+      // Output sensor parameters to serial
+      Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
+      Serial.print("MTR: "); Serial.print(meter); Serial.print("\t\t");
+      Serial.print("CLSD: "); Serial.print(IsClosed); Serial.print("\t\t");
+    }
 
     if(DHTISUP == true) {
-      // Reading temperature and humidity from DHT sensor
+      // Read temperature and humidity from DHT sensor
+      // and output to serial
       if(! isnan(humid) && ! isnan(temp)){
         Serial.print("TEMP: "); Serial.print(temp); Serial.print(" C\t\t");
         Serial.print("HUMID: "); Serial.print(humid); Serial.print(" %\t\t");   
@@ -99,6 +103,13 @@ void loop() {
 
     counter++ ;
   }
+  // Receive serial commands  
+  if(Serial.available()) {
+    input = Serial.readStringUntil('\n');
+    if(input == "open") { open(); }
+    else if(input == "close") { close(); }
+    else { Serial.println(">> Unknown command: "+input); }
+    }
 }
 
 void open() {
