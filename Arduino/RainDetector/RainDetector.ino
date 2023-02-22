@@ -22,9 +22,10 @@
 
 
 // Enviromment variables
-#define DHTISUP         false             // Read from DHT temperature-humidity sensor
-#define NONSTOP         false             // Motor Always on (only for debug-adjustemment)
-#define SERIALRETURN    false             // Send variable data to serial (debug-adjustemment)
+#define DHTISUP         false              // Read from DHT temperature-humidity sensor.
+#define NONSTOP         false             // Motor Always on (only for debug-adjustemment).
+                                          // May cause overheating!
+#define SERIALRETURN    false             // Send variable data to serial (debug-adjustemment).
 
 // Defining I/O pins
 int Sensor = A0;
@@ -47,10 +48,11 @@ DHT dht(DHTPIN, DHTTYPE);
 void setup() {
   // Serial -> Input/Output  
   Serial.begin(9600);
+  Serial.println(">> Starting");
 
-  if(DHTISUP == true) {
-    dht.begin();  
-  }
+  // DHT -> Temperature-Humidity sensor
+  dht.begin();
+
   // Setting motor pins
   pinMode(pmotor, OUTPUT); pinMode(nmotor, OUTPUT);
 
@@ -65,25 +67,14 @@ void loop() {
   if(NONSTOP == true) { digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH); }
   else {
     int Read = abs(analogRead(Sensor));
-    humid = dht.readHumidity();
-    temp = dht.readTemperature();
     delay(30);
     if(SERIALRETURN == true) {
       // Output sensor parameters to serial
       Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
       Serial.print("MTR: "); Serial.print(meter); Serial.print("\t\t");
       Serial.print("CLSD: "); Serial.print(IsClosed); Serial.print("\t\t");
+      Serial.print("\n");
     }
-
-    if(DHTISUP == true) {
-      // Read temperature and humidity from DHT sensor
-      // and output to serial
-      if(! isnan(humid) && ! isnan(temp)){
-        Serial.print("TEMP: "); Serial.print(temp); Serial.print(" C\t\t");
-        Serial.print("HUMID: "); Serial.print(humid); Serial.print(" %\t\t");   
-      }
-    }
-    Serial.print("\n");
 
     // Check if diference between readings exceeds 15pwm
     // on the 20ms interval. Also if the meter value doesnt
@@ -103,11 +94,17 @@ void loop() {
 
     counter++ ;
   }
+  if(DHTISUP == true) {
+      // Read temperature and humidity from DHT sensor
+      // and output to serial
+      dhtread();
+  }
   // Receive serial commands  
   if(Serial.available()) {
     input = Serial.readStringUntil('\n');
     if(input == "open") { open(); }
     else if(input == "close") { close(); }
+    else if(input == "dht") { dhtread(); }
     else { Serial.println(">> Unknown command: "+input); }
     }
 }
@@ -146,3 +143,14 @@ void close() {
   digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
 }
 
+void dhtread() {
+  int humid = dht.readHumidity();
+  delay(100);
+  int temp = dht.readTemperature();
+  delay(100);
+  if(! isnan(humid) && ! isnan(temp)){
+    Serial.print("TEMP: "); Serial.print(temp); Serial.print(" C\t\t");
+    Serial.print("HUMID: "); Serial.print(humid); Serial.print(" %\t\t");
+    Serial.println();
+  }
+}
