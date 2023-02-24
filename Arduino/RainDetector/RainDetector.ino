@@ -33,7 +33,7 @@ int nmotor = 5;
 int pmotor = 6;
 
 // Declaring global variables
-const long interval = 2000;
+const long interval = 5000;
 unsigned long previousMillis = 0;
 long int meter;
 bool IsClosed = true; // Cycle starts closed
