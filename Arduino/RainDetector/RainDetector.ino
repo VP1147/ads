@@ -23,7 +23,7 @@
 
 // Enviromment variables
 #define DHTISUP         false              // Read from DHT temperature-humidity sensor.
-#define NONSTOP         false             // Motor Always on (only for debug-adjustemment).
+#define NONSTOP         false           // Motor Always on (only for debug-adjustemment).
                                           // May cause overheating!
 #define SERIALRETURN    false             // Send variable data to serial (debug-adjustemment).
 
@@ -33,7 +33,7 @@ int nmotor = 5;
 int pmotor = 6;
 
 // Declaring global variables
-const long interval = 5000;
+const long interval = 10000;
 unsigned long previousMillis = 0;
 long int meter;
 bool IsClosed = true; // Cycle starts closed
