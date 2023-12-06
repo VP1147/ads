@@ -22,6 +22,7 @@
 int Sensor = A0;                             // Infrared Sensor
 int nmotor = 5;                              // Close signal pin 
 int pmotor = 6;                              // Open signal pin
+int mswitch = 8;                             // Microswitch
 
 // Microswitch pins - Detects if the lid is fully open or fully closed before stopping the motor
 int ms_fullopen = 8;
@@ -34,6 +35,11 @@ long int meter;
 bool IsClosed = true; // Cycle starts closed
 int counter = 0;
 String input;
+
+// Defining sensor parameters
+int ceiling = 600 ;           // Max. value for sensor counter - higher means
+                              // slower response to rain stop
+int activate = 150 ;          // Value in which the opening signal is sent
 
 void setup() {
   // Serial -> Input/Output  
@@ -68,12 +74,12 @@ void loop() {
     // Check if diference between readings exceeds 15pwm
     // on the 20ms interval. Also if the meter value doesnt
     // exceed the wall limiter.
-    if((abs(analogRead(Sensor)-Read) > 15) && meter < 600) {
+    if((abs(analogRead(Sensor)-Read) > 15) && meter < ceiling) {
       meter += 25;
     }
     // Starts opening cycle if meter value reaches 150
     if(meter > 0) { 
-      if(meter > 150 && IsClosed == true) { open(); }
+      if(meter > activate && IsClosed == true) { open(); }
       // If open, subtracts from meter value until it reaches zero
       meter-- ;
     }
@@ -109,6 +115,21 @@ void open() {
   IsClosed = false;
 }
 
+// Verifies microswitch state
+char VerifyState() {
+  if(digitalRead(ms_fullclose) == HIGH && digitalRead(ms_fullopen) == LOW) {
+    Serial.println(">> Lid is CLOSED");
+    return 'c';
+  }
+  else if(digitalRead(ms_fullclose) == LOW && digitalRead(ms_fullopen) == HIGH) {
+    Serial.println(">> Lid is OPEN");
+    return 'o';
+  }
+  else {
+    Serial.println(">> ERROR - COULD NOT DETECT ANY MS SIGNAL!");
+    return 'e';
+  }
+}
 void close() {
   // Starts the closing cycle
   Serial.println(">> Closing ...");
