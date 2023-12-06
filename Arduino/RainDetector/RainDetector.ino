@@ -127,6 +127,7 @@ char VerifyState() {
   }
   else {
     Serial.println(">> ERROR - COULD NOT DETECT ANY MS SIGNAL!");
+    Serial.println(">> SYSTEM MUST BE HALTED FOR PREVINING DAMAGE");
     return 'e';
   }
 }
