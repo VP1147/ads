@@ -16,13 +16,12 @@
 // Enviromment variables
 #define NONSTOP         false                // Motor Always on (only for debug-adjustemment).
                                              // May cause overheating!
-#define SERIALRETURN    true                // Send verbose variable data to serial (debug or adjustemment).
+#define SERIALRETURN    false                // Send verbose variable data to serial (debug or adjustemment).
 
 // Defining I/O pins
 int Sensor = A0;                             // Infrared Sensor
 int nmotor = 5;                              // Close signal pin 
 int pmotor = 6;                              // Open signal pin
-int mswitch = 8;                             // Microswitch
 
 // Microswitch pins - Detects if the lid is fully open or fully closed before stopping the motor
 int ms_fullopen = 8;
@@ -54,6 +53,12 @@ void setup() {
 
   // Setting IR sensor pin
   pinMode(Sensor, INPUT);
+
+  pinMode(nmotor, OUTPUT);
+  pinMode(pmotor, OUTPUT);
+  pinMode(ms_fullopen, INPUT);
+  pinMode(ms_fullclose, INPUT);
+  
 }
 
 void loop() {
@@ -100,19 +105,26 @@ void loop() {
 }
 
 void open() {
-  // Starts the opening cycle
-  Serial.println(">> Opening ...");
-  Serial.println(">> Waiting for MS detection to stop");
+  if(VerifyState() == 'c') {
+    // Starts the opening cycle
+    Serial.println(">> Opening ...");
 
-  // Wait until lid is fully open
-  while(digitalRead(ms_fullopen) == false) {
-  digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH);
-  }
+    // Wait until lid is fully open
+    while(digitalRead(ms_fullopen) == LOW) {
+      digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH);
+    }
   
-  // Send HH to Relay - motor poweroff
-  Serial.println(">> MS detected - Stopped!");
-  digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
-  IsClosed = false;
+    // Send HH to Relay - motor poweroff
+    digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
+    Serial.println(">> Lid is fully open");
+    IsClosed = false;
+  }
+  else if(VerifyState() == 'o') {
+    Serial.println(">> OPENING CYCLE STOPPED - LID IS OPEN");
+  }
+  else if(VerifyState() == 'e') {
+    Serial.println(">> OPENING CYCLE STOPPED - SYSTEM IS HALTED");
+  }
 }
 
 // Verifies microswitch state
@@ -132,15 +144,22 @@ char VerifyState() {
   }
 }
 void close() {
-  // Starts the closing cycle
-  Serial.println(">> Closing ...");
-  Serial.println(">> Waiting for MS detection to stop");
-
-  while(digitalRead(ms_fullclose) == false) {
-    digitalWrite(nmotor, LOW); digitalWrite(pmotor, HIGH);
+  if(VerifyState() == 'o') {
+    // Starts the closing cycle
+    Serial.println(">> Closing ...");
+    
+    while(digitalRead(ms_fullclose) == LOW) {
+      digitalWrite(nmotor, LOW); digitalWrite(pmotor, HIGH);
+    }
+    // Send HH to Relay - motor poweroff
+    digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
+    Serial.println(">> Lid is fully closed");
+    IsClosed = true;
   }
-  // Send HH to Relay - motor poweroff
-  Serial.println(">> MS detected - Stopped!");
-  digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
-  IsClosed = true;
+  else if(VerifyState() == 'c') {
+    Serial.println(">> CLOSING CYCLE STOPPED - LID IS CLOSED");
+  }
+  else if(VerifyState() == 'e') {
+    Serial.println(">> CLOSING CYCLE STOPPED - SYSTEM IS HALTED");
+  }
 }
