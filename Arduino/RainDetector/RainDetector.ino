@@ -16,7 +16,7 @@
 // Enviromment variables
 #define NONSTOP         false                // Motor Always on (only for debug-adjustemment).
                                              // May cause overheating!
-#define SERIALRETURN    false                // Send verbose variable data to serial (debug or adjustemment).
+#define SERIALRETURN    true                // Send verbose variable data to serial (debug or adjustemment).
 
 // Defining I/O pins
 int Sensor = A0;                             // Infrared Sensor
