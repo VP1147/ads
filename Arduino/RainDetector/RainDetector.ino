@@ -1,5 +1,5 @@
 /*
-  "Rain Detector" 
+  "Rain Detector"
   Arduino microcontroler code for ADS -
   Atmospheric Deposition Sampler).
   Instructions, circuits and documentation are
@@ -19,13 +19,18 @@
 #define SERIALRETURN    true                // Send verbose variable data to serial (debug or adjustemment).
 
 // Defining I/O pins
-int Sensor = A0;                             // Infrared Sensor
-int nmotor = 5;                              // Close signal pin 
-int pmotor = 6;                              // Open signal pin
+int Sensor = A0;                             // Infrared Sensor (input)
+int nmotor = 5;                              // Close signal pin (output)
+int pmotor = 6;                              // Open signal pin (output)
 
 // Microswitch pins - Detects if the lid is fully open or fully closed before stopping the motor
-int ms_fullopen = 8;
-int ms_fullclose = 9;
+int ms_fullopen = 8;      // Open switch (input)
+int ms_fullclose = 9;     // Closed switch (input)
+
+// Information LEDs
+int halt_led = 7; // RED
+int op_cl_led = 10; // YELLOW
+int det_led = 11; // GREEN
 
 // Declaring global variables
 const long interval = 10000;
@@ -33,12 +38,12 @@ unsigned long previousMillis = 0;
 long int meter;
 bool IsClosed = true; // Cycle starts closed
 int counter = 0;
-String input;
-
+String input;         // Stores serial input text
 // Defining sensor parameters
 int ceiling = 600 ;           // Max. value for sensor counter - higher means
-                              // slower response to rain stop
-int activate = 150 ;          // Value in which the opening signal is sent
+                              // slower response to rain <stopping>
+int activate = 150 ;          // Value in which the opening signal is sent - higher
+                              // means slower response to rain <starting>
 
 void setup() {
   // Serial -> Input/Output  
@@ -56,6 +61,11 @@ void setup() {
 
   pinMode(nmotor, OUTPUT);
   pinMode(pmotor, OUTPUT);
+
+  pinMode(halt_led, OUTPUT);
+  pinMode(op_cl_led, OUTPUT);
+  pinMode(det_led, OUTPUT);
+
   pinMode(ms_fullopen, INPUT);
   pinMode(ms_fullclose, INPUT);
   
@@ -63,26 +73,30 @@ void setup() {
 
 void loop() {
   if(NONSTOP == true) { digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH); }
-  else {
+  else {                      // Normal operation
+    digitalWrite(det_led, LOW);
+    digitalWrite(14, LOW);
     int Read = abs(analogRead(Sensor));
     delay(30);
     if(SERIALRETURN == true) {
       // Output sensor parameters to serial
       Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
-      Serial.print("MTR: "); Serial.print(meter); Serial.print("\t\t");
-      Serial.print("CLSD: "); Serial.print(IsClosed); Serial.print("\t\t");
+      Serial.print("METER: "); Serial.print(meter); Serial.print("\t\t");
+      Serial.print("CLOSE: "); Serial.print(IsClosed); Serial.print("\t\t");
       Serial.print("MS_OPN: "); Serial.print(digitalRead(ms_fullopen)); Serial.print("\t\t");
       Serial.print("MS_CLS: "); Serial.print(digitalRead(ms_fullclose)); Serial.print("\t\t");
       Serial.print("\n");
     }
 
-    // Check if diference between readings exceeds 15pwm
+    // Check if diference between readings exceeds 15/1024
     // on the 20ms interval. Also if the meter value doesnt
     // exceed the wall limiter.
     if((abs(analogRead(Sensor)-Read) > 15) && meter < ceiling) {
       meter += 25;
+      digitalWrite(det_led, HIGH);
+      digitalWrite(14, HIGH);
     }
-    // Starts opening cycle if meter value reaches 150
+    // Starts opening cycle if meter reacher the activation value
     if(meter > 0) { 
       if(meter > activate && IsClosed == true) { open(); }
       // If open, subtracts from meter value until it reaches zero
@@ -95,11 +109,11 @@ void loop() {
     counter++ ;
     
   // Receive serial commands  
-  if(Serial.available()) {
-    input = Serial.readStringUntil('\n');
-    if(input == "open") { open(); }
-    else if(input == "close") { close(); }
-    else { Serial.println(">> Unknown command: "+input); }
+    if(Serial.available()) {
+      input = Serial.readStringUntil('\n');
+      if(input == "open") { open(); }
+      else if(input == "close") { close(); }
+      else { Serial.println(">> Unknown command: "+input); }
     }
   }
 }
