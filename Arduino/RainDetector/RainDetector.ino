@@ -18,6 +18,8 @@
                                              // May cause overheating!
 #define SERIALRETURN    true                // Send verbose variable data to serial (debug or adjustemment).
 
+#define IGNOREMS        true
+
 // Defining I/O pins
 int Sensor = A0;                             // Infrared Sensor (input)
 int nmotor = 5;                              // Close signal pin (output)
@@ -40,9 +42,9 @@ bool IsClosed = true; // Cycle starts closed
 int counter = 0;
 String input;         // Stores serial input text
 // Defining sensor parameters
-int ceiling = 600 ;           // Max. value for sensor counter - higher means
+int ceiling = 400 ;           // Max. value for sensor counter - higher means
                               // slower response to rain <stopping>
-int activate = 150 ;          // Value in which the opening signal is sent - higher
+int activate = 60 ;          // Value in which the opening signal is sent - higher
                               // means slower response to rain <starting>
 
 void setup() {
@@ -69,13 +71,14 @@ void setup() {
   pinMode(ms_fullopen, INPUT);
   pinMode(ms_fullclose, INPUT);
   
+  if(VerifyState() == 'o') { close(); }
 }
 
 void loop() {
   if(NONSTOP == true) { digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH); }
   else {                      // Normal operation
     digitalWrite(det_led, LOW);
-    digitalWrite(14, LOW);
+    digitalWrite(20, LOW);
     int Read = abs(analogRead(Sensor));
     delay(30);
     if(SERIALRETURN == true) {
@@ -91,8 +94,8 @@ void loop() {
     // Check if diference between readings exceeds 15/1024
     // on the 20ms interval. Also if the meter value doesnt
     // exceed the wall limiter.
-    if((abs(analogRead(Sensor)-Read) > 15) && meter < ceiling) {
-      meter += 25;
+    if((abs(analogRead(Sensor)-Read) > 10) && meter < ceiling) {
+      meter += 40;
       digitalWrite(det_led, HIGH);
       digitalWrite(14, HIGH);
     }
@@ -115,6 +118,14 @@ void loop() {
       else if(input == "close") { close(); }
       else { Serial.println(">> Unknown command: "+input); }
     }
+  }
+
+  // Measure state from microswitches
+  if(VerifyState() == 'o') {
+    IsClosed == false;
+  }
+  else if(VerifyState() == 'c') {
+    IsClosed == true;
   }
 }
 
@@ -144,11 +155,9 @@ void open() {
 // Verifies microswitch state
 char VerifyState() {
   if(digitalRead(ms_fullclose) == HIGH && digitalRead(ms_fullopen) == LOW) {
-    Serial.println(">> Lid is CLOSED");
     return 'c';
   }
   else if(digitalRead(ms_fullclose) == LOW && digitalRead(ms_fullopen) == HIGH) {
-    Serial.println(">> Lid is OPEN");
     return 'o';
   }
   else {
