@@ -28,6 +28,7 @@ int pmotor = 6;                              // Open signal pin (output)
 // Microswitch pins - Detects if the lid is fully open or fully closed before stopping the motor
 int ms_fullopen = 8;      // Open switch (input)
 int ms_fullclose = 9;     // Closed switch (input)
+int open_button = 7;
 
 // Information LEDs
 int halt_led = 7; // RED
@@ -86,8 +87,9 @@ void loop() {
       Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
       Serial.print("METER: "); Serial.print(meter); Serial.print("\t\t");
       Serial.print("CLOSE: "); Serial.print(IsClosed); Serial.print("\t\t");
-      Serial.print("MS_OPN: "); Serial.print(digitalRead(ms_fullopen)); Serial.print("\t\t");
-      Serial.print("MS_CLS: "); Serial.print(digitalRead(ms_fullclose)); Serial.print("\t\t");
+      Serial.print("MS_OPN: "); Serial.print(digitalRead(ms_fullopen)); Serial.print("\t");
+      Serial.print("MS_CLS: "); Serial.print(digitalRead(ms_fullclose)); Serial.print("\t");
+      Serial.print("BTN: "); Serial.print(digitalRead(open_button)); Serial.print("\t");
       Serial.print("\n");
     }
 
@@ -106,7 +108,7 @@ void loop() {
       meter-- ;
     }
     // if meter value reaches one, starts closing cycle
-    if(meter == 1 && IsClosed == false) { close(); }
+    if(meter == 1 && IsClosed == false && digitalRead(open_button) == LOW) { close(); }
 
 
     counter++ ;
@@ -117,6 +119,11 @@ void loop() {
       if(input == "open") { open(); }
       else if(input == "close") { close(); }
       else { Serial.println(">> Unknown command: "+input); }
+    }
+
+    // Open if external button is pressed
+    if(digitalRead(open_button) == HIGH && IsClosed == true) {
+      open();
     }
   }
 
@@ -138,7 +145,7 @@ void open() {
     while(digitalRead(ms_fullopen) == LOW) {
       digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH);
     }
-  
+    delay(100);
     // Send HH to Relay - motor poweroff
     digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
     Serial.println(">> Lid is fully open");
@@ -154,10 +161,10 @@ void open() {
 
 // Verifies microswitch state
 char VerifyState() {
-  if(digitalRead(ms_fullclose) == HIGH && digitalRead(ms_fullopen) == LOW) {
+  if(digitalRead(ms_fullclose) == HIGH) {
     return 'c';
   }
-  else if(digitalRead(ms_fullclose) == LOW && digitalRead(ms_fullopen) == HIGH) {
+  else if(digitalRead(ms_fullopen) == HIGH) {
     return 'o';
   }
   else {
