@@ -41,6 +41,7 @@ unsigned long previousMillis = 0;
 long int meter;
 bool IsClosed = true; // Cycle starts closed
 int counter = 0;
+int timer = 0;
 String input;         // Stores serial input text
 // Defining sensor parameters
 int ceiling = 400 ;           // Max. value for sensor counter - higher means
@@ -72,7 +73,8 @@ void setup() {
   pinMode(ms_fullopen, INPUT);
   pinMode(ms_fullclose, INPUT);
   
-  if(VerifyState() == 'o') { close(); }
+  if(VerifyState() == 'o') { close(true); }
+  else if(VerifyState() == 'e') { close(false); }
 }
 
 void loop() {
@@ -103,12 +105,12 @@ void loop() {
     }
     // Starts opening cycle if meter reacher the activation value
     if(meter > 0) { 
-      if(meter > activate && IsClosed == true) { open(); }
+      if(meter > activate && IsClosed == true) { open(false); }
       // If open, subtracts from meter value until it reaches zero
       meter-- ;
     }
     // if meter value reaches one, starts closing cycle
-    if(meter == 1 && IsClosed == false && digitalRead(open_button) == LOW) { close(); }
+    if(meter == 1 && IsClosed == false && digitalRead(open_button) == LOW) { close(false); }
 
 
     counter++ ;
@@ -116,14 +118,14 @@ void loop() {
   // Receive serial commands  
     if(Serial.available()) {
       input = Serial.readStringUntil('\n');
-      if(input == "open") { open(); }
-      else if(input == "close") { close(); }
+      if(input == "open") { open(true); }
+      else if(input == "close") { close(true); }
       else { Serial.println(">> Unknown command: "+input); }
     }
 
     // Open if external button is pressed
     if(digitalRead(open_button) == HIGH && IsClosed == true) {
-      open();
+      open(true);
     }
   }
 
@@ -136,14 +138,17 @@ void loop() {
   }
 }
 
-void open() {
-  if(VerifyState() == 'c') {
+void open(bool verify_closed) {
+  if(VerifyState() == 'c' || verify_closed == false) {
     // Starts the opening cycle
     Serial.println(">> Opening ...");
 
     // Wait until lid is fully open
-    while(digitalRead(ms_fullopen) == LOW) {
+    timer = 0;
+    while(digitalRead(ms_fullopen) == LOW || timer == 3000) {
       digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH);
+      delay(1);
+      timer++;
     }
     delay(100);
     // Send HH to Relay - motor poweroff
@@ -151,10 +156,10 @@ void open() {
     Serial.println(">> Lid is fully open");
     IsClosed = false;
   }
-  else if(VerifyState() == 'o') {
+  else if(VerifyState() == 'o' && verify_closed == true) {
     Serial.println(">> OPENING CYCLE STOPPED - LID IS OPEN");
   }
-  else if(VerifyState() == 'e') {
+  else if(VerifyState() == 'e' && verify_closed == true) {
     Serial.println(">> OPENING CYCLE STOPPED - SYSTEM IS HALTED");
   }
 }
@@ -169,27 +174,28 @@ char VerifyState() {
   }
   else {
     Serial.println(">> ERROR - COULD NOT DETECT ANY MS SIGNAL!");
-    Serial.println(">> SYSTEM MUST BE HALTED FOR PREVINING DAMAGE");
     return 'e';
   }
 }
-void close() {
-  if(VerifyState() == 'o') {
+void close(bool verify_open) {
+  if(VerifyState() == 'o' || verify_open == false) {
     // Starts the closing cycle
     Serial.println(">> Closing ...");
-    
-    while(digitalRead(ms_fullclose) == LOW) {
+    timer = 0;
+    while(digitalRead(ms_fullclose) == LOW || timer == 3000) {
       digitalWrite(nmotor, LOW); digitalWrite(pmotor, HIGH);
+      delay(1);
+      timer++;
     }
     // Send HH to Relay - motor poweroff
     digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
     Serial.println(">> Lid is fully closed");
     IsClosed = true;
   }
-  else if(VerifyState() == 'c') {
+  else if(VerifyState() == 'c' || verify_open == true) {
     Serial.println(">> CLOSING CYCLE STOPPED - LID IS CLOSED");
   }
-  else if(VerifyState() == 'e') {
+  else if(VerifyState() == 'e' || verify_open == true) {
     Serial.println(">> CLOSING CYCLE STOPPED - SYSTEM IS HALTED");
   }
 }
