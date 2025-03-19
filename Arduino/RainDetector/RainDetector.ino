@@ -18,7 +18,7 @@
                                              // May cause overheating!
 #define SERIALRETURN    true                // Send verbose variable data to serial (debug or adjustemment).
 
-#define IGNOREMS        true
+#define IGNOREMS        false
 
 // Defining I/O pins
 int Sensor = A0;                             // Infrared Sensor (input)
@@ -42,9 +42,12 @@ long int meter;
 bool IsClosed = true; // Cycle starts closed
 int counter = 0;
 int timer = 0;
+int lim = 200;        // Threshold value for calibration (adjustable)
+int bg;               // Adjusted by calibrate() function
 String input;         // Stores serial input text
+
 // Defining sensor parameters
-int ceiling = 400 ;           // Max. value for sensor counter - higher means
+int ceiling = 600 ;           // Max. value for sensor counter - higher means
                               // slower response to rain <stopping>
 int activate = 60 ;          // Value in which the opening signal is sent - higher
                               // means slower response to rain <starting>
@@ -60,7 +63,7 @@ void setup() {
   // Send HH to Relay - motor poweroff
   digitalWrite(pmotor, HIGH); digitalWrite(nmotor, HIGH);
 
-  // Setting IR sensor pin
+  // Setting sensor pin
   pinMode(Sensor, INPUT);
 
   pinMode(nmotor, OUTPUT);
@@ -75,6 +78,11 @@ void setup() {
   
   if(VerifyState() == 'o') { close(true); }
   else if(VerifyState() == 'e') { close(false); }
+
+  // Start calibration cycle
+  Serial.println(">> Starting callibration");
+  bg = calibrate(Sensor, 100, 3000);
+  Serial.print(">> Bg value set to "); Serial.print(bg); Serial.println();
 }
 
 void loop() {
@@ -95,10 +103,9 @@ void loop() {
       Serial.print("\n");
     }
 
-    // Check if diference between readings exceeds 15/1024
-    // on the 20ms interval. Also if the meter value doesnt
-    // exceed the wall limiter.
-    if((abs(analogRead(Sensor)-Read) > 10) && meter < ceiling) {
+    // Check if diference between readings exceeds bg + lim
+    // Also if the meter value doesnt exceed the wall limiter.
+    if(analogRead(Sensor) > bg+lim || analogRead(Sensor) < bg - lim && meter < ceiling) {
       meter += 40;
       digitalWrite(det_led, HIGH);
       digitalWrite(14, HIGH);
@@ -138,6 +145,15 @@ void loop() {
   }
 }
 
+int calibrate(int port, int steps, int period) {   // i.e. calibrate(Sensor, 100, 5000)
+  int tot;
+  for(int i=0; i<steps; i++) {
+    tot+=int(analogRead(port));
+    delay(int(period/steps));
+  }
+  return tot/steps;
+}
+
 void open(bool verify_closed) {
   if(VerifyState() == 'c' || verify_closed == false) {
     // Starts the opening cycle
@@ -145,7 +161,7 @@ void open(bool verify_closed) {
 
     // Wait until lid is fully open
     timer = 0;
-    while(digitalRead(ms_fullopen) == LOW || timer == 3000) {
+    while(digitalRead(ms_fullopen) == LOW || timer == 4000) {
       digitalWrite(pmotor, LOW); digitalWrite(nmotor, HIGH);
       delay(1);
       timer++;
