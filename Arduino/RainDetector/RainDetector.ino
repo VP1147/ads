@@ -78,11 +78,6 @@ void setup() {
   
   if(VerifyState() == 'o') { close(true); }
   else if(VerifyState() == 'e') { close(false); }
-
-  // Start calibration cycle
-  Serial.println(">> Starting callibration");
-  bg = calibrate(Sensor, 100, 3000);
-  Serial.print(">> Bg value set to "); Serial.print(bg); Serial.println();
 }
 
 void loop() {
@@ -90,11 +85,10 @@ void loop() {
   else {                      // Normal operation
     digitalWrite(det_led, LOW);
     digitalWrite(20, LOW);
-    int Read = abs(analogRead(Sensor));
     delay(30);
     if(SERIALRETURN == true) {
       // Output sensor parameters to serial
-      Serial.print("\tREAD: "); Serial.print(Read); Serial.print("\t\t");
+      Serial.print("\tREAD: "); Serial.print(analogRead(Sensor)); Serial.print("\t\t");
       Serial.print("METER: "); Serial.print(meter); Serial.print("\t\t");
       Serial.print("CLOSE: "); Serial.print(IsClosed); Serial.print("\t\t");
       Serial.print("MS_OPN: "); Serial.print(digitalRead(ms_fullopen)); Serial.print("\t");
@@ -105,7 +99,7 @@ void loop() {
 
     // Check if diference between readings exceeds bg + lim
     // Also if the meter value doesnt exceed the wall limiter.
-    if(analogRead(Sensor) > bg+lim || analogRead(Sensor) < bg - lim && meter < ceiling) {
+    if(analogRead(Sensor) < 1000 && meter < ceiling) {
       meter += 40;
       digitalWrite(det_led, HIGH);
       digitalWrite(14, HIGH);
@@ -146,9 +140,9 @@ void loop() {
 }
 
 int calibrate(int port, int steps, int period) {   // i.e. calibrate(Sensor, 100, 5000)
-  int tot;
+  int tot=0;
   for(int i=0; i<steps; i++) {
-    tot+=int(analogRead(port));
+    tot+=analogRead(port);
     delay(int(period/steps));
   }
   return tot/steps;
